@@ -618,11 +618,9 @@ const ProviderSetting = ({ providerName, settingName, subTextMd }: { providerNam
 	const voidSettingsService = accessor.get('IVoidSettingsService')
 	const settingsState = useSettingsState()
 
-	const settingValue = settingsState.settingsOfProvider[providerName][settingName] as string // this should always be a string in this component
-	if (typeof settingValue !== 'string') {
-		console.log('Error: Provider setting had a non-string value.')
-		return
-	}
+	// 从用户设置中获取值，如果不存在则使用默认值（支持新添加的设置字段如 endpoint）
+	const rawSettingValue = settingsState.settingsOfProvider[providerName][settingName]
+	const settingValue = typeof rawSettingValue === 'string' ? rawSettingValue : (placeholder ?? '')
 
 	// Create a stable callback reference using useCallback with proper dependencies
 	const handleChangeValue = useCallback((newVal: string) => {
