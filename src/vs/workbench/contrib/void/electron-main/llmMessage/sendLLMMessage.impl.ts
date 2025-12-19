@@ -345,6 +345,18 @@ const _sendOpenAICompatibleChat = async ({ messages, onText, onFinalMessage, onE
 	let toolId = ''
 	let toolParamsStr = ''
 
+	// [DEBUG] 打印请求信息到 console
+	console.log('[LLM Request Debug]', {
+		provider: providerName,
+		baseURL: openai.baseURL,
+		model: modelName,
+		messagesCount: messages.length,
+		options: {
+			...options,
+			messages: `[${messages.length} messages]` // 不打印完整消息内容，只显示数量
+		}
+	})
+
 	openai.chat.completions
 		.create(options)
 		.then(async response => {
@@ -497,15 +509,28 @@ const sendAnthropicChat = async ({ messages, providerName, onText, onFinalMessag
 		dangerouslyAllowBrowser: true
 	});
 
-	const stream = anthropic.messages.stream({
+	const streamParams = {
 		system: separateSystemMessage ?? undefined,
 		messages: messages as AnthropicLLMChatMessage[],
 		model: modelName,
 		max_tokens: maxTokens ?? 4_096, // anthropic requires this
 		...includeInPayload,
 		...nativeToolsObj,
+	}
 
+	// [DEBUG] 打印请求信息到 console
+	console.log('[LLM Request Debug - Anthropic]', {
+		provider: providerName,
+		baseURL: thisConfig.endpoint,
+		model: modelName,
+		messagesCount: messages.length,
+		params: {
+			...streamParams,
+			messages: `[${messages.length} messages]` // 不打印完整消息内容，只显示数量
+		}
 	})
+
+	const stream = anthropic.messages.stream(streamParams)
 
 	// manually parse out tool results if XML
 	if (!specialToolFormat) {
@@ -794,7 +819,7 @@ const sendGeminiChat = async ({
 	let toolId = ''
 
 
-	genAI.models.generateContentStream({
+	const geminiParams = {
 		model: modelName,
 		config: {
 			systemInstruction: separateSystemMessage,
@@ -802,7 +827,21 @@ const sendGeminiChat = async ({
 			tools: toolConfig,
 		},
 		contents: messages as GeminiLLMChatMessage[],
+	}
+
+	// [DEBUG] 打印请求信息到 console
+	console.log('[LLM Request Debug - Gemini]', {
+		provider: providerName,
+		baseURL: thisConfig.endpoint,
+		model: modelName,
+		messagesCount: messages.length,
+		params: {
+			...geminiParams,
+			contents: `[${messages.length} messages]` // 不打印完整消息内容，只显示数量
+		}
 	})
+
+	genAI.models.generateContentStream(geminiParams)
 		.then(async (stream) => {
 			_setAborter(() => { stream.return(fullTextSoFar); });
 
