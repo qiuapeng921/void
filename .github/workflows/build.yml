@@ -1,0 +1,312 @@
+# Void 编译工作流
+# 用于编译 Void 编辑器的各平台可执行文件
+# 注意：此工作流生成的是本地开发版本，如需正式发布版本，请使用 void-builder 仓库
+
+name: Build Void
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_platform:
+        description: '目标平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - linux-x64
+          - linux-arm64
+          - darwin-arm64
+          - darwin-x64
+          - win32-x64
+          - win32-arm64
+
+env:
+  NODE_VERSION: '20.18.2'
+  PYTHON_VERSION: '3.11'
+  # 增加 Node.js 内存限制，避免编译时内存不足
+  NODE_OPTIONS: '--max-old-space-size=8192'
+
+jobs:
+  # ====================
+  # Linux x64 构建
+  # ====================
+  build-linux-x64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'linux-x64' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Linux 依赖
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            g++ \
+            libx11-dev \
+            libxkbfile-dev \
+            libsecret-1-dev \
+            libkrb5-dev \
+            python-is-python3 \
+            fakeroot \
+            rpm
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 Linux x64 可执行文件
+        run: npm run gulp vscode-linux-x64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-linux-x64
+          path: ../VSCode-linux-x64/
+          retention-days: 7
+
+  # ====================
+  # Linux ARM64 构建
+  # ====================
+  build-linux-arm64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'linux-arm64' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Linux 依赖
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            g++ \
+            libx11-dev \
+            libxkbfile-dev \
+            libsecret-1-dev \
+            libkrb5-dev \
+            python-is-python3 \
+            fakeroot \
+            g++-aarch64-linux-gnu \
+            gcc-aarch64-linux-gnu
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 Linux ARM64 可执行文件
+        env:
+          npm_config_arch: arm64
+        run: npm run gulp vscode-linux-arm64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-linux-arm64
+          path: ../VSCode-linux-arm64/
+          retention-days: 7
+
+  # ====================
+  # macOS ARM64 构建 (Apple Silicon)
+  # ====================
+  build-darwin-arm64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'darwin-arm64' }}
+    runs-on: macos-14  # Apple Silicon runner
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 macOS ARM64 可执行文件
+        run: npm run gulp vscode-darwin-arm64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-darwin-arm64
+          path: ../VSCode-darwin-arm64/
+          retention-days: 7
+
+  # ====================
+  # macOS x64 构建 (Intel)
+  # ====================
+  build-darwin-x64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'darwin-x64' }}
+    runs-on: macos-13  # Intel runner
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 macOS x64 可执行文件
+        run: npm run gulp vscode-darwin-x64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-darwin-x64
+          path: ../VSCode-darwin-x64/
+          retention-days: 7
+
+  # ====================
+  # Windows x64 构建
+  # ====================
+  build-win32-x64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'win32-x64' }}
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 Windows x64 可执行文件
+        run: npm run gulp vscode-win32-x64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-win32-x64
+          path: ../VSCode-win32-x64/
+          retention-days: 7
+
+  # ====================
+  # Windows ARM64 构建
+  # ====================
+  build-win32-arm64:
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'win32-arm64' }}
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 构建 Windows ARM64 可执行文件
+        run: npm run gulp vscode-win32-arm64
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-win32-arm64
+          path: ../VSCode-win32-arm64/
+          retention-days: 7

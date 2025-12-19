@@ -1,0 +1,331 @@
+# Void 发布工作流
+# 用于编译 Void 编辑器并生成可分发的安装包
+# 基于 void-builder 的构建流程简化而来
+
+name: Release Void
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: 1.99.3)'
+        required: true
+        type: string
+      target_platform:
+        description: '目标平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - linux
+          - macos
+          - windows
+      create_release:
+        description: '创建 GitHub Release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20.18.2'
+  PYTHON_VERSION: '3.11'
+  NODE_OPTIONS: '--max-old-space-size=8192'
+  APP_NAME: 'Void'
+  BINARY_NAME: 'void'
+
+jobs:
+  # ====================
+  # 版本检查与准备
+  # ====================
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 验证版本号
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::版本号格式不正确，应为 x.y.z 格式"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ 版本号验证通过: $VERSION"
+
+  # ====================
+  # Linux 构建
+  # ====================
+  build-linux:
+    needs: prepare
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'linux' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Linux 依赖
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            g++ \
+            libx11-dev \
+            libxkbfile-dev \
+            libsecret-1-dev \
+            libkrb5-dev \
+            python-is-python3 \
+            fakeroot \
+            rpm \
+            dpkg
+
+      - name: 安装交叉编译工具链 (ARM64)
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get install -y \
+            g++-aarch64-linux-gnu \
+            gcc-aarch64-linux-gnu
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 编译扩展
+        run: npm run compile-extensions-build
+
+      - name: 构建 Linux ${{ matrix.arch }} 可执行文件
+        env:
+          npm_config_arch: ${{ matrix.arch }}
+        run: npm run gulp vscode-linux-${{ matrix.arch }}
+
+      - name: 创建 tar.gz 压缩包
+        run: |
+          cd ..
+          FOLDER_NAME="VSCode-linux-${{ matrix.arch }}"
+          if [ -d "$FOLDER_NAME" ]; then
+            tar -czvf void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz "$FOLDER_NAME"
+            echo "✅ 已创建压缩包: void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz"
+          else
+            echo "::error::构建产物文件夹不存在: $FOLDER_NAME"
+            exit 1
+          fi
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          path: ../void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz
+          retention-days: 14
+
+  # ====================
+  # macOS 构建
+  # ====================
+  build-macos:
+    needs: prepare
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'macos' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-13
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 编译扩展
+        run: npm run compile-extensions-build
+
+      - name: 构建 macOS ${{ matrix.arch }} 可执行文件
+        run: npm run gulp vscode-darwin-${{ matrix.arch }}
+
+      - name: 创建 zip 压缩包
+        run: |
+          cd ..
+          FOLDER_NAME="VSCode-darwin-${{ matrix.arch }}"
+          if [ -d "$FOLDER_NAME" ]; then
+            zip -r -y void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip "$FOLDER_NAME"
+            echo "✅ 已创建压缩包: void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip"
+          else
+            echo "::error::构建产物文件夹不存在: $FOLDER_NAME"
+            exit 1
+          fi
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          path: ../void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
+          retention-days: 14
+
+  # ====================
+  # Windows 构建
+  # ====================
+  build-windows:
+    needs: prepare
+    if: ${{ github.event.inputs.target_platform == 'all' || github.event.inputs.target_platform == 'windows' }}
+    runs-on: windows-2022
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装项目依赖
+        run: npm ci
+
+      - name: 编译 React 组件
+        run: npm run buildreact
+
+      - name: 编译项目
+        run: npm run compile
+
+      - name: 编译扩展
+        run: npm run compile-extensions-build
+
+      - name: 构建 Windows ${{ matrix.arch }} 可执行文件
+        run: npm run gulp vscode-win32-${{ matrix.arch }}
+
+      - name: 创建 zip 压缩包
+        shell: pwsh
+        run: |
+          $folderName = "VSCode-win32-${{ matrix.arch }}"
+          $zipName = "void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip"
+          $sourcePath = Join-Path ".." $folderName
+          $destPath = Join-Path ".." $zipName
+
+          if (Test-Path $sourcePath) {
+            Compress-Archive -Path $sourcePath -DestinationPath $destPath -Force
+            Write-Host "✅ 已创建压缩包: $zipName"
+          } else {
+            Write-Error "构建产物文件夹不存在: $folderName"
+            exit 1
+          }
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          path: ../void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
+          retention-days: 14
+
+  # ====================
+  # 创建 GitHub Release
+  # ====================
+  release:
+    needs: [prepare, build-linux, build-macos, build-windows]
+    if: ${{ always() && github.event.inputs.create_release == 'true' && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: 列出下载的产物
+        run: |
+          echo "📦 下载的构建产物:"
+          find ./artifacts -type f -name "*.tar.gz" -o -name "*.zip" | sort
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name: Void ${{ needs.prepare.outputs.version }}
+          body: |
+            ## Void ${{ needs.prepare.outputs.version }}
+
+            ### 下载
+
+            | 平台 | 架构 | 下载 |
+            |------|------|------|
+            | Linux | x64 | `void-linux-x64-${{ needs.prepare.outputs.version }}.tar.gz` |
+            | Linux | ARM64 | `void-linux-arm64-${{ needs.prepare.outputs.version }}.tar.gz` |
+            | macOS | ARM64 (Apple Silicon) | `void-darwin-arm64-${{ needs.prepare.outputs.version }}.zip` |
+            | macOS | x64 (Intel) | `void-darwin-x64-${{ needs.prepare.outputs.version }}.zip` |
+            | Windows | x64 | `void-win32-x64-${{ needs.prepare.outputs.version }}.zip` |
+            | Windows | ARM64 | `void-win32-arm64-${{ needs.prepare.outputs.version }}.zip` |
+
+            ### 安装说明
+
+            1. 下载对应平台的压缩包
+            2. 解压到任意目录
+            3. 运行 `Void` (macOS/Linux) 或 `Void.exe` (Windows)
+          draft: true
+          generate_release_notes: true
+          files: |
+            ./artifacts/**/*.tar.gz
+            ./artifacts/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
