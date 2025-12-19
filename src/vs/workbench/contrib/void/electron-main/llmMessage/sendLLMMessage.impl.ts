@@ -76,7 +76,9 @@ const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includ
 	}
 	if (providerName === 'openAI') {
 		const thisConfig = settingsOfProvider[providerName]
-		return new OpenAI({ apiKey: thisConfig.apiKey, ...commonPayloadOpts })
+		// 使用可配置的 endpoint，默认为 https://api.openai.com
+		const baseURL = `${thisConfig.endpoint}/v1`
+		return new OpenAI({ baseURL, apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 	else if (providerName === 'ollama') {
 		const thisConfig = settingsOfProvider[providerName]
@@ -96,8 +98,10 @@ const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includ
 	}
 	else if (providerName === 'openRouter') {
 		const thisConfig = settingsOfProvider[providerName]
+		// 使用可配置的 endpoint，默认为 https://openrouter.ai/api
+		const baseURL = `${thisConfig.endpoint}/v1`
 		return new OpenAI({
-			baseURL: 'https://openrouter.ai/api/v1',
+			baseURL,
 			apiKey: thisConfig.apiKey,
 			defaultHeaders: {
 				'HTTP-Referer': 'https://voideditor.com', // Optional, for including your app on openrouter.ai rankings.
@@ -148,7 +152,9 @@ const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includ
 
 	else if (providerName === 'deepseek') {
 		const thisConfig = settingsOfProvider[providerName]
-		return new OpenAI({ baseURL: 'https://api.deepseek.com/v1', apiKey: thisConfig.apiKey, ...commonPayloadOpts })
+		// 使用可配置的 endpoint，默认为 https://api.deepseek.com
+		const baseURL = `${thisConfig.endpoint}/v1`
+		return new OpenAI({ baseURL, apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 	else if (providerName === 'openAICompatible') {
 		const thisConfig = settingsOfProvider[providerName]
@@ -157,15 +163,21 @@ const newOpenAICompatibleSDK = async ({ settingsOfProvider, providerName, includ
 	}
 	else if (providerName === 'groq') {
 		const thisConfig = settingsOfProvider[providerName]
-		return new OpenAI({ baseURL: 'https://api.groq.com/openai/v1', apiKey: thisConfig.apiKey, ...commonPayloadOpts })
+		// 使用可配置的 endpoint，默认为 https://api.groq.com/openai
+		const baseURL = `${thisConfig.endpoint}/v1`
+		return new OpenAI({ baseURL, apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 	else if (providerName === 'xAI') {
 		const thisConfig = settingsOfProvider[providerName]
-		return new OpenAI({ baseURL: 'https://api.x.ai/v1', apiKey: thisConfig.apiKey, ...commonPayloadOpts })
+		// 使用可配置的 endpoint，默认为 https://api.x.ai
+		const baseURL = `${thisConfig.endpoint}/v1`
+		return new OpenAI({ baseURL, apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 	else if (providerName === 'mistral') {
 		const thisConfig = settingsOfProvider[providerName]
-		return new OpenAI({ baseURL: 'https://api.mistral.ai/v1', apiKey: thisConfig.apiKey, ...commonPayloadOpts })
+		// 使用可配置的 endpoint，默认为 https://api.mistral.ai
+		const baseURL = `${thisConfig.endpoint}/v1`
+		return new OpenAI({ baseURL, apiKey: thisConfig.apiKey, ...commonPayloadOpts })
 	}
 
 	else throw new Error(`Void providerName was invalid: ${providerName}.`)
@@ -478,9 +490,10 @@ const sendAnthropicChat = async ({ messages, providerName, onText, onFinalMessag
 		: {}
 
 
-	// instance
+	// instance - 使用可配置的 endpoint，默认为 https://api.anthropic.com
 	const anthropic = new Anthropic({
 		apiKey: thisConfig.apiKey,
+		baseURL: thisConfig.endpoint,
 		dangerouslyAllowBrowser: true
 	});
 
@@ -758,8 +771,11 @@ const sendGeminiChat = async ({
 		potentialTools
 		: undefined
 
-	// instance
-	const genAI = new GoogleGenAI({ apiKey: thisConfig.apiKey });
+	// instance - 使用可配置的 endpoint，默认为 https://generativelanguage.googleapis.com
+	const genAI = new GoogleGenAI({
+		apiKey: thisConfig.apiKey,
+		httpOptions: { baseUrl: thisConfig.endpoint }
+	});
 
 
 	// manually parse out tool results if XML

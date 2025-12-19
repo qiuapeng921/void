@@ -171,7 +171,15 @@ export const displayInfoOfSettingName = (providerName: ProviderName, settingName
 								providerName === 'microsoftAzure' ? 'baseURL' :
 									providerName === 'liteLLM' ? 'baseURL' :
 										providerName === 'awsBedrock' ? 'Endpoint' :
-											'(never)',
+											providerName === 'deepseek' ? 'API Endpoint' :
+												providerName === 'openRouter' ? 'API Endpoint' :
+													providerName === 'groq' ? 'API Endpoint' :
+														providerName === 'xAI' ? 'API Endpoint' :
+															providerName === 'mistral' ? 'API Endpoint' :
+																providerName === 'anthropic' ? 'API Endpoint' :
+																	providerName === 'openAI' ? 'API Endpoint' :
+																		providerName === 'gemini' ? 'API Endpoint' :
+																			'(never)',
 
 			placeholder: providerName === 'ollama' ? defaultProviderSettings.ollama.endpoint
 				: providerName === 'vLLM' ? defaultProviderSettings.vLLM.endpoint
@@ -179,7 +187,15 @@ export const displayInfoOfSettingName = (providerName: ProviderName, settingName
 						: providerName === 'lmStudio' ? defaultProviderSettings.lmStudio.endpoint
 							: providerName === 'liteLLM' ? 'http://localhost:4000'
 								: providerName === 'awsBedrock' ? 'http://localhost:4000/v1'
-									: '(never)',
+									: providerName === 'deepseek' ? defaultProviderSettings.deepseek.endpoint
+										: providerName === 'openRouter' ? defaultProviderSettings.openRouter.endpoint
+											: providerName === 'groq' ? defaultProviderSettings.groq.endpoint
+												: providerName === 'xAI' ? defaultProviderSettings.xAI.endpoint
+													: providerName === 'mistral' ? defaultProviderSettings.mistral.endpoint
+														: providerName === 'anthropic' ? defaultProviderSettings.anthropic.endpoint
+															: providerName === 'openAI' ? defaultProviderSettings.openAI.endpoint
+																: providerName === 'gemini' ? defaultProviderSettings.gemini.endpoint
+																	: '(never)',
 
 
 		}

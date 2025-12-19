@@ -12,12 +12,15 @@ import { FeatureName, ModelSelectionOptions, OverridesOfModel, ProviderName } fr
 export const defaultProviderSettings = {
 	anthropic: {
 		apiKey: '',
+		endpoint: 'https://api.anthropic.com', // 可配置的 API 端点，支持自定义代理
 	},
 	openAI: {
 		apiKey: '',
+		endpoint: 'https://api.openai.com', // 可配置的 API 端点，支持自定义代理
 	},
 	deepseek: {
 		apiKey: '',
+		endpoint: 'https://api.deepseek.com', // 可配置的 API 端点，支持自定义代理
 	},
 	ollama: {
 		endpoint: 'http://127.0.0.1:11434',
@@ -27,6 +30,7 @@ export const defaultProviderSettings = {
 	},
 	openRouter: {
 		apiKey: '',
+		endpoint: 'https://openrouter.ai/api', // 可配置的 API 端点，支持自定义代理
 	},
 	openAICompatible: {
 		endpoint: '',
@@ -35,15 +39,19 @@ export const defaultProviderSettings = {
 	},
 	gemini: {
 		apiKey: '',
+		endpoint: 'https://generativelanguage.googleapis.com', // 可配置的 API 端点，支持自定义代理
 	},
 	groq: {
 		apiKey: '',
+		endpoint: 'https://api.groq.com/openai', // 可配置的 API 端点，支持自定义代理
 	},
 	xAI: {
 		apiKey: '',
+		endpoint: 'https://api.x.ai', // 可配置的 API 端点，支持自定义代理
 	},
 	mistral: {
 		apiKey: '',
+		endpoint: 'https://api.mistral.ai', // 可配置的 API 端点，支持自定义代理
 	},
 	lmStudio: {
 		endpoint: 'http://localhost:1234',
