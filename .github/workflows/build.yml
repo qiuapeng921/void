@@ -77,11 +77,14 @@ jobs:
       - name: 构建 Linux x64 可执行文件
         run: npm run gulp vscode-linux-x64
 
+      - name: 移动构建产物到工作目录
+        run: mv ../VSCode-linux-x64 ./dist-linux-x64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-linux-x64
-          path: ../VSCode-linux-x64/
+          path: ./dist-linux-x64/
           retention-days: 7
 
   # ====================
@@ -136,11 +139,14 @@ jobs:
           npm_config_arch: arm64
         run: npm run gulp vscode-linux-arm64
 
+      - name: 移动构建产物到工作目录
+        run: mv ../VSCode-linux-arm64 ./dist-linux-arm64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-linux-arm64
-          path: ../VSCode-linux-arm64/
+          path: ./dist-linux-arm64/
           retention-days: 7
 
   # ====================
@@ -178,11 +184,14 @@ jobs:
       - name: 构建 macOS ARM64 可执行文件
         run: npm run gulp vscode-darwin-arm64
 
+      - name: 移动构建产物到工作目录
+        run: mv ../VSCode-darwin-arm64 ./dist-darwin-arm64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-darwin-arm64
-          path: ../VSCode-darwin-arm64/
+          path: ./dist-darwin-arm64/
           retention-days: 7
 
   # ====================
@@ -220,11 +229,14 @@ jobs:
       - name: 构建 macOS x64 可执行文件
         run: npm run gulp vscode-darwin-x64
 
+      - name: 移动构建产物到工作目录
+        run: mv ../VSCode-darwin-x64 ./dist-darwin-x64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-darwin-x64
-          path: ../VSCode-darwin-x64/
+          path: ./dist-darwin-x64/
           retention-days: 7
 
   # ====================
@@ -262,11 +274,15 @@ jobs:
       - name: 构建 Windows x64 可执行文件
         run: npm run gulp vscode-win32-x64
 
+      - name: 移动构建产物到工作目录
+        shell: pwsh
+        run: Move-Item -Path ..\VSCode-win32-x64 -Destination .\dist-win32-x64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-win32-x64
-          path: ../VSCode-win32-x64/
+          path: ./dist-win32-x64/
           retention-days: 7
 
   # ====================
@@ -304,9 +320,13 @@ jobs:
       - name: 构建 Windows ARM64 可执行文件
         run: npm run gulp vscode-win32-arm64
 
+      - name: 移动构建产物到工作目录
+        shell: pwsh
+        run: Move-Item -Path ..\VSCode-win32-arm64 -Destination .\dist-win32-arm64
+
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-win32-arm64
-          path: ../VSCode-win32-arm64/
+          path: ./dist-win32-arm64/
           retention-days: 7

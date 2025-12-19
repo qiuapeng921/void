@@ -125,23 +125,19 @@ jobs:
           npm_config_arch: ${{ matrix.arch }}
         run: npm run gulp vscode-linux-${{ matrix.arch }}
 
-      - name: 创建 tar.gz 压缩包
+      - name: 移动并创建 tar.gz 压缩包
         run: |
-          cd ..
-          FOLDER_NAME="VSCode-linux-${{ matrix.arch }}"
-          if [ -d "$FOLDER_NAME" ]; then
-            tar -czvf void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz "$FOLDER_NAME"
-            echo "✅ 已创建压缩包: void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz"
-          else
-            echo "::error::构建产物文件夹不存在: $FOLDER_NAME"
-            exit 1
-          fi
+          # 移动构建产物到工作目录
+          mv ../VSCode-linux-${{ matrix.arch }} ./dist-linux-${{ matrix.arch }}
+          # 创建压缩包
+          tar -czvf void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz ./dist-linux-${{ matrix.arch }}
+          echo "✅ 已创建压缩包: void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz"
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
-          path: ../void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz
+          path: ./void-linux-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.tar.gz
           retention-days: 14
 
   # ====================
@@ -191,23 +187,19 @@ jobs:
       - name: 构建 macOS ${{ matrix.arch }} 可执行文件
         run: npm run gulp vscode-darwin-${{ matrix.arch }}
 
-      - name: 创建 zip 压缩包
+      - name: 移动并创建 zip 压缩包
         run: |
-          cd ..
-          FOLDER_NAME="VSCode-darwin-${{ matrix.arch }}"
-          if [ -d "$FOLDER_NAME" ]; then
-            zip -r -y void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip "$FOLDER_NAME"
-            echo "✅ 已创建压缩包: void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip"
-          else
-            echo "::error::构建产物文件夹不存在: $FOLDER_NAME"
-            exit 1
-          fi
+          # 移动构建产物到工作目录
+          mv ../VSCode-darwin-${{ matrix.arch }} ./dist-darwin-${{ matrix.arch }}
+          # 创建压缩包
+          zip -r -y void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip ./dist-darwin-${{ matrix.arch }}
+          echo "✅ 已创建压缩包: void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip"
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
-          path: ../void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
+          path: ./void-darwin-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
           retention-days: 14
 
   # ====================
@@ -253,16 +245,19 @@ jobs:
       - name: 构建 Windows ${{ matrix.arch }} 可执行文件
         run: npm run gulp vscode-win32-${{ matrix.arch }}
 
-      - name: 创建 zip 压缩包
+      - name: 移动并创建 zip 压缩包
         shell: pwsh
         run: |
           $folderName = "VSCode-win32-${{ matrix.arch }}"
+          $distFolder = "dist-win32-${{ matrix.arch }}"
           $zipName = "void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip"
           $sourcePath = Join-Path ".." $folderName
-          $destPath = Join-Path ".." $zipName
 
           if (Test-Path $sourcePath) {
-            Compress-Archive -Path $sourcePath -DestinationPath $destPath -Force
+            # 移动到工作目录
+            Move-Item -Path $sourcePath -Destination $distFolder
+            # 创建压缩包
+            Compress-Archive -Path $distFolder -DestinationPath $zipName -Force
             Write-Host "✅ 已创建压缩包: $zipName"
           } else {
             Write-Error "构建产物文件夹不存在: $folderName"
@@ -273,7 +268,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
-          path: ../void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
+          path: ./void-win32-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}.zip
           retention-days: 14
 
   # ====================
