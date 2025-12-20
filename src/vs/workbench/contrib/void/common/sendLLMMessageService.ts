@@ -127,6 +127,78 @@ export class LLMMessageService extends Disposable implements ILLMMessageService 
 		this.llmMessageHooks.onError[requestId] = onError
 		this.llmMessageHooks.onAbort[requestId] = onAbort // used internally only
 
+		// [DEBUG] 打印详细请求信息到 console
+		const providerName = modelSelection.providerName
+		const providerSettings = settingsOfProvider[providerName] as Record<string, unknown>
+
+		// 根据 provider 构建完整的请求 URL
+		const endpoint = (providerSettings?.endpoint as string) || ''
+		let fullRequestUrl = ''
+		let headers: Record<string, string> = {}
+
+		// 根据不同的供应商构建请求路径和请求头
+		switch (providerName) {
+			case 'openAI':
+				fullRequestUrl = `${endpoint || 'https://api.openai.com'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'anthropic':
+				fullRequestUrl = `${endpoint || 'https://api.anthropic.com'}/v1/messages`
+				headers = { 'x-api-key': `${(providerSettings?.apiKey as string)?.slice(0, 10)}...`, 'anthropic-version': '2023-06-01' }
+				break
+			case 'deepseek':
+				fullRequestUrl = `${endpoint || 'https://api.deepseek.com'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'openRouter':
+				fullRequestUrl = `${endpoint || 'https://openrouter.ai/api'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...`, 'HTTP-Referer': 'https://voideditor.com', 'X-Title': 'Void' }
+				break
+			case 'gemini':
+				fullRequestUrl = `${endpoint || 'https://generativelanguage.googleapis.com'}/v1beta/models/${modelSelection.modelName}:streamGenerateContent`
+				headers = { 'x-goog-api-key': `${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'groq':
+				fullRequestUrl = `${endpoint || 'https://api.groq.com/openai'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'xAI':
+				fullRequestUrl = `${endpoint || 'https://api.x.ai'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'mistral':
+				fullRequestUrl = `${endpoint || 'https://api.mistral.ai'}/v1/chat/completions`
+				headers = { 'Authorization': `Bearer ${(providerSettings?.apiKey as string)?.slice(0, 10)}...` }
+				break
+			case 'ollama':
+				fullRequestUrl = `${endpoint || 'http://127.0.0.1:11434'}/v1/chat/completions`
+				break
+			default:
+				fullRequestUrl = endpoint ? `${endpoint}/v1/chat/completions` : '(unknown)'
+		}
+
+		// 构建请求参数（不包含完整消息内容）
+		const requestBody = {
+			model: modelSelection.modelName,
+			stream: true,
+			messages: params.messagesType === 'chatMessages'
+				? `[${params.messages?.length ?? 0} messages]`
+				: '[FIM message]',
+		}
+
+		console.log('═══════════════════════════════════════════════════════════')
+		console.log('[LLM Request Debug]')
+		console.log('───────────────────────────────────────────────────────────')
+		console.log('Request ID:', requestId)
+		console.log('Provider:', providerName)
+		console.log('Model:', modelSelection.modelName)
+		console.log('───────────────────────────────────────────────────────────')
+		console.log('Full URL:', fullRequestUrl)
+		console.log('Headers:', JSON.stringify(headers, null, 2))
+		console.log('Body:', JSON.stringify(requestBody, null, 2))
+		console.log('═══════════════════════════════════════════════════════════')
+
+
 		// params will be stripped of all its functions over the IPC channel
 		this.channel.call('sendLLMMessage', {
 			...proxyParams,
