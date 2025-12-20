@@ -177,25 +177,20 @@ export class LLMMessageService extends Disposable implements ILLMMessageService 
 				fullRequestUrl = endpoint ? `${endpoint}/v1/chat/completions` : '(unknown)'
 		}
 
-		// 构建请求参数（不包含完整消息内容）
+		// 构建完整的请求参数（包含消息内容）
 		const requestBody = {
 			model: modelSelection.modelName,
 			stream: true,
-			messages: params.messagesType === 'chatMessages'
-				? `[${params.messages?.length ?? 0} messages]`
-				: '[FIM message]',
+			messages: params.messagesType === 'chatMessages' ? params.messages : params.messages,
 		}
 
 		console.log('═══════════════════════════════════════════════════════════')
 		console.log('[LLM Request Debug]')
-		console.log('───────────────────────────────────────────────────────────')
-		console.log('Request ID:', requestId)
 		console.log('Provider:', providerName)
 		console.log('Model:', modelSelection.modelName)
-		console.log('───────────────────────────────────────────────────────────')
 		console.log('Full URL:', fullRequestUrl)
-		console.log('Headers:', JSON.stringify(headers, null, 2))
-		console.log('Body:', JSON.stringify(requestBody, null, 2))
+		console.log('Headers:', JSON.stringify(headers))
+		console.log('Body:', JSON.stringify(requestBody))
 		console.log('═══════════════════════════════════════════════════════════')
 
 
